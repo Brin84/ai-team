@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+aiogram
+SQLAlchemy[asyncio]
+asyncpg
+alembic
+pydantic
+redis
+openai
