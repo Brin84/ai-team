@@ -1,29 +1,37 @@
 class AITeam:
 
+    MAX_FIX_ATTEMPTS = 3
+
+
     def __init__(
-            self,
-            architect,
-            developer,
-            qa
+        self,
+        architect,
+        developer,
+        qa
     ):
+
         self.architect = architect
         self.developer = developer
         self.qa = qa
 
+
     @staticmethod
     def compress(
-            text: str,
-            limit: int = 500
+        text: str,
+        limit: int = 500
     ) -> str:
+
         if not text:
             return ""
 
         return text[:limit]
 
+
     def run(
-            self,
-            task: str
+        self,
+        task: str
     ):
+
         state = {
             "task": task,
             "architecture": "",
@@ -31,7 +39,11 @@ class AITeam:
             "review": ""
         }
 
-        # Архитектор
+
+        print(
+            "\n=== АРХИТЕКТОР ===\n"
+        )
+
 
         architecture = self.architect.run(
             f"""
@@ -45,7 +57,7 @@ class AITeam:
 2. Структуру проекта
 3. Компоненты
 
-Максимум 300 слов.
+Максимум 200 слов.
 """
         )
 
@@ -54,53 +66,14 @@ class AITeam:
             500
         )
 
-        # Разработчик
+
+        print(
+            "\n=== РАЗРАБОТЧИК ===\n"
+        )
+
 
         state["code"] = self.developer.run(
             f"""
-        Задача:
-
-        {task}
-
-        Архитектура:
-
-        {state["architecture"]}
-
-        Создай только 3 файла:
-
-        1. app/main.py
-        2. app/config.py
-        3. requirements.txt
-
-        Верни JSON такого вида:
-
-        {{
-            "files": [
-                {{
-                    "path": "app/main.py",
-                    "content": "код"
-                }}
-            ]
-        }}
-
-        Правила:
-
-        - не используй markdown
-        - content всегда строка
-        - каждый объект содержит path и content
-        - ответ начинается с {{
-        - ответ заканчивается }}
-
-        Создай файлы проекта.
-        """
-        )
-
-        # QA
-
-        review = self.qa.run(
-            f"""
-Проверь проект.
-
 Задача:
 
 {task}
@@ -109,19 +82,110 @@ class AITeam:
 
 {state["architecture"]}
 
-Найди:
+Верни ТОЛЬКО JSON.
 
-1. Баги
-2. Риски
-3. Ошибки
+Строгий формат:
 
-Максимум 200 слов.
+{{
+    "files": [
+        {{
+            "path": "app/main.py",
+            "content": "..."
+        }},
+        {{
+            "path": "requirements.txt",
+            "content": "..."
+        }}
+    ]
+}}
+
+Правила:
+
+- максимум 2 файла
+- максимум 150 строк на файл
+- content всегда строка
+- никаких markdown
+- никаких ```json
+- без комментариев
+- без повторяющихся импортов
+- только валидный JSON
 """
         )
 
-        state["review"] = self.compress(
-            review,
-            300
-        )
+
+        for attempt in range(
+            self.MAX_FIX_ATTEMPTS
+        ):
+
+            print(
+                f"\n=== QA ПРОВЕРКА {attempt + 1} ===\n"
+            )
+
+
+            review = self.qa.run(
+                f"""
+Проверь проект:
+
+{state["code"]}
+
+Найди:
+
+1. Ошибки
+2. Баги
+3. Повторяющийся код
+4. Лишние импорты
+5. Риски
+
+Если проблем нет:
+
+OK
+"""
+            )
+
+
+            state["review"] = review
+
+
+            if "OK" in review.upper():
+
+                print(
+                    "\nQA: ошибок нет\n"
+                )
+
+                break
+
+
+            print(
+                "\n=== ИСПРАВЛЕНИЕ ===\n"
+            )
+
+
+            state["code"] = self.developer.run(
+                f"""
+Исправь проект.
+
+Код:
+
+{state["code"]}
+
+Замечания QA:
+
+{review}
+
+Верни только JSON.
+
+Формат:
+
+{{
+    "files": [
+        {{
+            "path": "app/main.py",
+            "content": "..."
+        }}
+    ]
+}}
+"""
+            )
+
 
         return state
