@@ -28,10 +28,24 @@ class BaseAgent:
     ) -> str:
 
         messages = [
+
             ChatCompletionSystemMessageParam(
                 role="system",
-                content=str(self.role)
+                content=f"""
+{self.role}
+
+Критически важно:
+
+- не показывай reasoning
+- не объясняй ход мыслей
+- не начинай с "Okay"
+- не начинай с "Let's"
+- не начинай с "First"
+- не пиши анализ
+- верни только результат
+"""
             ),
+
             ChatCompletionUserMessageParam(
                 role="user",
                 content=str(task)
@@ -41,29 +55,68 @@ class BaseAgent:
         response = self.client.chat.completions.create(
             model=settings.MODEL_NAME,
             messages=messages,
-            max_tokens=2500,
-            temperature=0.1,
+            max_tokens=1600,
+            temperature=0.05,
             extra_body={
                 "think": False,
-                "num_predict": 2500
+                "options": {
+                    "num_predict": 1600,
+                    "temperature": 0.05
+                }
             }
         )
 
-        message = response.choices[0].message
 
-        content = message.content or ""
+        message = (
+            response
+            .choices[0]
+            .message
+        )
 
-        # если модель вернула пустой content —
-        # берём reasoning как запасной вариант
-        if not content:
 
-            reasoning = getattr(
-                message,
-                "reasoning",
-                ""
+        content = (
+            message.content
+            or
+            ""
+        )
+
+
+        bad_prefixes = [
+
+            "Okay",
+            "Let's",
+            "Let me",
+            "First",
+            "I need",
+            "I'll"
+        ]
+
+
+        cleaned = []
+
+
+        for line in content.split(
+            "\n"
+        ):
+
+            if any(
+
+                line.strip().startswith(
+                    prefix
+                )
+
+                for prefix
+                in bad_prefixes
+            ):
+
+                continue
+
+
+            cleaned.append(
+                line
             )
 
-            if reasoning:
-                content = reasoning
 
-        return str(content)
+        return "\n".join(
+            cleaned
+        ).strip()

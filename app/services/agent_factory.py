@@ -6,7 +6,6 @@ from app.core.agent_types import (
     AGENT_TYPES
 )
 
-
 class AgentFactory:
 
     @staticmethod

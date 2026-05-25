@@ -1,23 +1,109 @@
 import subprocess
 from pathlib import Path
 import sys
-import time
 
 
 class ProjectRunner:
 
-    @staticmethod
-    def install_requirements(project: Path):
+    SAFE_REQUIREMENTS = {
 
-        requirements = project / "requirements.txt"
+        "aiogram":
+            "aiogram>=3.28.2",
 
-        if not requirements.exists():
-            print("\nrequirements.txt не найден\n")
-            return
+        "fastapi":
+            "fastapi>=0.136",
 
-        print("\nУстановка зависимостей...\n")
+        "uvicorn":
+            "uvicorn>=0.35",
 
-        subprocess.run(
+        "pydantic-settings":
+            "pydantic-settings>=2.10"
+    }
+
+    @classmethod
+    def fix_requirements(
+        cls,
+        project: Path
+    ):
+
+        requirements = (
+            project /
+            "requirements.txt"
+        )
+
+        packages = {}
+
+        if requirements.exists():
+
+            with open(
+                requirements,
+                "r",
+                encoding="utf-8"
+            ) as f:
+
+                for line in f:
+
+                    line = line.strip()
+
+                    if not line:
+                        continue
+
+                    package = (
+                        line
+                        .split("==")[0]
+                        .split(">=")[0]
+                        .split("<=")[0]
+                        .strip()
+                        .lower()
+                    )
+
+                    packages[
+                        package
+                    ] = line
+
+        packages.update(
+            cls.SAFE_REQUIREMENTS
+        )
+
+        with open(
+            requirements,
+            "w",
+            encoding="utf-8"
+        ) as f:
+
+            f.write(
+                "\n".join(
+                    sorted(
+                        packages.values()
+                    )
+                )
+            )
+
+    @classmethod
+    def run(
+        cls
+    ):
+
+        project = Path(
+            "generated_projects/project_1"
+        )
+
+        requirements = (
+            project /
+            "requirements.txt"
+        )
+
+        if requirements.exists():
+
+            cls.fix_requirements(
+                project
+            )
+
+        print(
+            "\nУстановка зависимостей...\n"
+        )
+
+        install = subprocess.run(
             [
                 sys.executable,
                 "-m",
@@ -26,62 +112,63 @@ class ProjectRunner:
                 "-r",
                 "requirements.txt"
             ],
-            cwd=project
+            cwd=project,
+            capture_output=True,
+            text=True
         )
 
+        if install.returncode != 0:
 
-    @classmethod
-    def run(cls):
+            return {
 
-        project = Path(
-            "generated_projects/project_1"
-        )
+                "success": False,
 
-        cls.install_requirements(
-            project
+                "stdout":
+                    install.stdout,
+
+                "stderr":
+                    install.stderr
+            }
+
+        print(
+            "\nЗапуск проекта...\n"
         )
 
         try:
 
-            print(
-                "\nЗапуск проекта...\n"
-            )
-
-            process = subprocess.Popen(
+            result = subprocess.run(
                 [
                     sys.executable,
-                    "main.py"
+                    "-m",
+                    "app.main"
                 ],
                 cwd=project,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                capture_output=True,
+                text=True,
+                timeout=15
             )
 
-            time.sleep(3)
-
-            if process.poll() is not None:
-
-                stdout, stderr = process.communicate()
-
-                return {
-                    "success": False,
-                    "stdout": stdout,
-                    "stderr": stderr
-                }
-
             return {
-                "success": True,
-                "stdout": (
-                    f"Процесс запущен PID={process.pid}"
-                ),
-                "stderr": ""
+
+                "success":
+                    result.returncode == 0,
+
+                "stdout":
+                    result.stdout,
+
+                "stderr":
+                    result.stderr
             }
 
-        except Exception as e:
+        except subprocess.TimeoutExpired:
 
             return {
-                "success": False,
-                "stdout": "",
-                "stderr": str(e)
+
+                "success": True,
+
+                "stdout":
+                    "Проект успешно запущен",
+
+                "stderr":
+                    ""
             }

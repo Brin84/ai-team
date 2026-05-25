@@ -1,19 +1,31 @@
+from typing import Any
+
+from app.services.history_service import (
+    HistoryService
+)
+
+from app.services.response_validator import (
+    ResponseValidator
+)
+
+
 class AITeam:
 
     MAX_FIX_ATTEMPTS = 3
-
+    MAX_JSON_FIX_ATTEMPTS = 3
 
     def __init__(
         self,
+        planner,
         architect,
         developer,
         qa
     ):
 
+        self.planner = planner
         self.architect = architect
         self.developer = developer
         self.qa = qa
-
 
     @staticmethod
     def compress(
@@ -21,171 +33,288 @@ class AITeam:
         limit: int = 500
     ) -> str:
 
+        return str(
+            text or ""
+        )[:limit]
+
+    @staticmethod
+    def extract_content(
+        response
+    ) -> str:
+
+        if response is None:
+            return ""
+
+        if hasattr(
+            response,
+            "content"
+        ):
+
+            return str(
+                response.content
+            )
+
+        if isinstance(
+            response,
+            dict
+        ):
+
+            return str(
+                response.get(
+                    "content",
+                    ""
+                )
+            )
+
+        return str(
+            response
+        )
+
+    @staticmethod
+    def repair_json(
+        text: str
+    ) -> str:
+
         if not text:
             return ""
 
-        return text[:limit]
+        text = str(text)
 
+        text = text.replace(
+            "```json",
+            ""
+        )
+
+        text = text.replace(
+            "```",
+            ""
+        )
+
+        start = text.find("{")
+        end = text.rfind("}")
+
+        if (
+            start == -1
+            or
+            end == -1
+        ):
+            return ""
+
+        return text[
+            start:end + 1
+        ]
+
+    @staticmethod
+    def is_empty_response(
+        text: str
+    ) -> bool:
+
+        return (
+            not text
+            or
+            not str(text).strip()
+        )
+
+    def get_rules(self) -> str:
+
+        return """
+ОБЯЗАТЕЛЬНО:
+
+Создай простой FastAPI проект.
+
+Используй:
+
+- FastAPI
+- logging
+- uvicorn
+
+Структура:
+
+1) app/main.py
+2) requirements.txt
+
+main.py должен:
+
+- создать FastAPI()
+- иметь endpoint "/"
+- вернуть:
+
+{
+    "status":"ok"
+}
+
+requirements.txt:
+
+fastapi>=0.136
+uvicorn>=0.35
+
+Правила:
+
+- только два файла
+- только app/main.py
+- только requirements.txt
+- content всегда строка
+- никаких БД
+- никаких selenium
+- никаких parser
+- никаких settings
+- никаких postgres
+- никаких dotenv
+- никаких дополнительных файлов
+- без markdown
+- без пояснений
+
+Вернуть только JSON:
+
+{
+    "files":[
+        {
+            "path":"app/main.py",
+            "content":"..."
+        },
+        {
+            "path":"requirements.txt",
+            "content":"..."
+        }
+    ]
+}
+"""
 
     def run(
         self,
         task: str
     ):
 
-        state = {
+        state: dict[str, Any] = {
+
             "task": task,
+            "plan": "",
             "architecture": "",
             "code": "",
-            "review": ""
+            "review": "",
+            "runtime_errors": []
+
         }
 
+        team_errors = (
+            HistoryService.get_known_errors()
+        )
+
+        success_patterns = (
+            HistoryService.get_success_patterns()
+        )
+
+        print(
+            "\n=== ПЛАНИРОВЩИК ===\n"
+        )
+
+        state["plan"] = self.compress(
+            self.extract_content(
+                self.planner.run(
+                    task
+                )
+            ),
+            400
+        )
 
         print(
             "\n=== АРХИТЕКТОР ===\n"
         )
 
-
-        architecture = self.architect.run(
-            f"""
-Задача:
-
-{task}
-
-Создай:
-
-1. Стек
-2. Структуру проекта
-3. Компоненты
-
-Максимум 200 слов.
-"""
-        )
-
         state["architecture"] = self.compress(
-            architecture,
-            500
+            self.extract_content(
+                self.architect.run(
+                    state["plan"]
+                )
+            )
         )
-
 
         print(
             "\n=== РАЗРАБОТЧИК ===\n"
         )
 
+        rules = self.get_rules()
 
-        state["code"] = self.developer.run(
-            f"""
+        state["code"] = self.repair_json(
+            self.extract_content(
+                self.developer.run(
+                    f"""
 Задача:
 
 {task}
 
-Архитектура:
+Известные ошибки:
 
-{state["architecture"]}
+{team_errors}
 
-Верни ТОЛЬКО JSON.
+Успешные решения:
 
-Строгий формат:
+{success_patterns}
 
-{{
-    "files": [
-        {{
-            "path": "app/main.py",
-            "content": "..."
-        }},
-        {{
-            "path": "requirements.txt",
-            "content": "..."
-        }}
-    ]
-}}
-
-Правила:
-
-- максимум 2 файла
-- максимум 150 строк на файл
-- content всегда строка
-- никаких markdown
-- никаких ```json
-- без комментариев
-- без повторяющихся импортов
-- только валидный JSON
+{rules}
 """
+                )
+            )
         )
 
-
         for attempt in range(
-            self.MAX_FIX_ATTEMPTS
+            self.MAX_JSON_FIX_ATTEMPTS
         ):
 
-            print(
-                f"\n=== QA ПРОВЕРКА {attempt + 1} ===\n"
-            )
-
-
-            review = self.qa.run(
-                f"""
-Проверь проект:
-
-{state["code"]}
-
-Найди:
-
-1. Ошибки
-2. Баги
-3. Повторяющийся код
-4. Лишние импорты
-5. Риски
-
-Если проблем нет:
-
-OK
-"""
-            )
-
-
-            state["review"] = review
-
-
-            if "OK" in review.upper():
+            if self.is_empty_response(
+                state["code"]
+            ):
 
                 print(
-                    "\nQA: ошибок нет\n"
+                    "\nПустой ответ, повтор...\n"
                 )
 
-                break
+            else:
 
+                is_valid, error = (
+                    ResponseValidator.validate(
+                        state["code"]
+                    )
+                )
 
-            print(
-                "\n=== ИСПРАВЛЕНИЕ ===\n"
-            )
+                if is_valid:
 
+                    return state
 
-            state["code"] = self.developer.run(
-                f"""
+                print(
+                    f"\nОшибка ответа: {error}"
+                )
+
+                print(
+                    "\n=== RAW RESPONSE ===\n"
+                )
+
+                print(
+                    state["code"][:3000]
+                )
+
+            state["code"] = self.repair_json(
+                self.extract_content(
+                    self.developer.run(
+                        f"""
 Исправь проект.
 
-Код:
+Предыдущий ответ:
 
 {state["code"]}
 
-Замечания QA:
-
-{review}
+{rules}
 
 Верни только JSON.
-
-Формат:
-
-{{
-    "files": [
-        {{
-            "path": "app/main.py",
-            "content": "..."
-        }}
-    ]
-}}
 """
+                    )
+                )
             )
 
+        state["runtime_errors"] = [
+            "Не удалось получить валидный JSON"
+        ]
+
+        state["code"] = ""
 
         return state

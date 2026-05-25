@@ -1,4 +1,4 @@
-import re
+import json
 from pathlib import Path
 
 
@@ -8,6 +8,7 @@ class FileWriter:
         "generated_projects/project_1"
     )
 
+
     @classmethod
     def save(
         cls,
@@ -16,37 +17,46 @@ class FileWriter:
 
         try:
 
-            response = response or ""
-
-            response = response.replace(
-                "```json",
-                ""
-            ).replace(
-                "```",
-                ""
+            response = (
+                response
+                .replace(
+                    "```json",
+                    ""
+                )
+                .replace(
+                    "```",
+                    ""
+                )
+                .strip()
             )
 
-            response = response.strip()
-
-            # Ищем все завершённые file-блоки
-            file_matches = re.findall(
-                r'\{\s*"path"\s*:\s*"([^"]+)"\s*,\s*"content"\s*:\s*"([\s\S]*?)"\s*}',
+            data = json.loads(
                 response
             )
 
-            if not file_matches:
+            files = data.get(
+                "files",
+                []
+            )
+
+            if not files:
+
                 raise Exception(
                     "Файлы не найдены"
                 )
 
             created_files = []
 
-            for path, content in file_matches:
 
-                content = content.encode(
-                    "utf-8"
-                ).decode(
-                    "unicode_escape"
+            for file_data in files:
+
+                path = file_data.get(
+                    "path"
+                )
+
+                content = file_data.get(
+                    "content",
+                    ""
                 )
 
                 full_path = (
@@ -65,11 +75,14 @@ class FileWriter:
                     encoding="utf-8"
                 ) as f:
 
-                    f.write(content)
+                    f.write(
+                        content
+                    )
 
                 created_files.append(
                     str(full_path)
                 )
+
 
             print(
                 "\nСозданы файлы:\n"
