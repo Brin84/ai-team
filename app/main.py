@@ -28,6 +28,14 @@ from app.services.history_service import (
     HistoryService
 )
 
+from app.services.runtime_analyzer import (
+    RuntimeAnalyzer
+)
+
+from app.services.knowledge_service import (
+    KnowledgeService
+)
+
 
 def load_task() -> str:
 
@@ -44,6 +52,20 @@ def load_task() -> str:
     return task_file.read_text(
         encoding="utf-8"
     )
+
+
+def save_history_safe(
+    result
+):
+
+    try:
+
+        HistoryService.save(
+            result
+        )
+
+    except Exception:
+        pass
 
 
 def main():
@@ -99,36 +121,36 @@ def main():
 
     if (
 
-            not result.get("code")
+        not result.get(
+            "code"
+        )
 
-            or
+        or
 
-            result.get(
-                "runtime_errors"
-            )
+        result.get(
+            "runtime_errors"
+        )
 
     ):
+
         print(
             "\nПроект не сохранён"
         )
 
         errors = result.get(
             "runtime_errors",
-            ["Неизвестная ошибка"]
+            [
+                "Неизвестная ошибка"
+            ]
         )
 
         for error in errors:
 
             print(error)
 
-        try:
-
-            HistoryService.save(
-                result
-            )
-
-        except Exception:
-            pass
+        save_history_safe(
+            result
+        )
 
         return
 
@@ -138,14 +160,9 @@ def main():
 
     if not success:
 
-        try:
-
-            HistoryService.save(
-                result
-            )
-
-        except Exception:
-            pass
+        save_history_safe(
+            result
+        )
 
         return
 
@@ -167,14 +184,9 @@ def main():
             "runtime_errors"
         ] = errors
 
-        try:
-
-            HistoryService.save(
-                result
-            )
-
-        except Exception:
-            pass
+        save_history_safe(
+            result
+        )
 
         return
 
@@ -200,14 +212,9 @@ def main():
             "runtime_errors"
         ] = import_errors
 
-        try:
-
-            HistoryService.save(
-                result
-            )
-
-        except Exception:
-            pass
+        save_history_safe(
+            result
+        )
 
         return
 
@@ -227,12 +234,14 @@ def main():
         "success"
     ):
 
-        print(
-            runtime.get(
-                "stdout",
-                ""
-            )
+        stdout = runtime.get(
+            "stdout",
+            ""
         )
+
+        if stdout:
+
+            print(stdout)
 
         try:
 
@@ -250,36 +259,58 @@ def main():
                 f"\nОшибка сохранения паттерна: {e}"
             )
 
-    else:
+        return
 
-        print(
-            "\n=== RUNTIME QA ===\n"
-        )
+    print(
+        "\n=== RUNTIME QA ===\n"
+    )
 
-        print(
-            runtime.get(
-                "stderr",
-                "Неизвестная ошибка"
+    runtime_error = runtime.get(
+        "stderr",
+        "Неизвестная ошибка"
+    )
+
+    print(
+        runtime_error
+    )
+
+    result[
+        "runtime_errors"
+    ] = [
+        runtime_error
+    ]
+
+    try:
+
+        rule = (
+            RuntimeAnalyzer.analyze(
+                runtime_error
             )
         )
 
-        result[
-            "runtime_errors"
-        ] = [
-            runtime.get(
-                "stderr",
-                "Неизвестная ошибка"
-            )
-        ]
+        if rule:
 
-        try:
-
-            HistoryService.save(
-                result
+            KnowledgeService.save_rule(
+                rule
             )
 
-        except Exception:
-            pass
+            print(
+                "\nНовое знание сохранено:"
+            )
+
+            print(
+                rule
+            )
+
+    except Exception as e:
+
+        print(
+            f"\nОшибка анализа: {e}"
+        )
+
+    save_history_safe(
+        result
+    )
 
 
 if __name__ == "__main__":
