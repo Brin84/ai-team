@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 
@@ -8,6 +9,21 @@ class FileWriter:
         "generated_projects/project_1"
     )
 
+    @classmethod
+    def clear_project(
+        cls
+    ):
+
+        if cls.BASE_DIR.exists():
+
+            shutil.rmtree(
+                cls.BASE_DIR
+            )
+
+        cls.BASE_DIR.mkdir(
+            parents=True,
+            exist_ok=True
+        )
 
     @classmethod
     def save(
@@ -16,6 +32,8 @@ class FileWriter:
     ):
 
         try:
+
+            cls.clear_project()
 
             response = (
                 response
@@ -46,7 +64,6 @@ class FileWriter:
                 )
 
             created_files = []
-
 
             for file_data in files:
 
@@ -83,7 +100,6 @@ class FileWriter:
                     str(full_path)
                 )
 
-
             print(
                 "\nСозданы файлы:\n"
             )
@@ -95,7 +111,6 @@ class FileWriter:
                 )
 
             return True
-
 
         except Exception as e:
 

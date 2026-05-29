@@ -9,6 +9,35 @@ class ResponseValidator:
         "requirements.txt"
     }
 
+    FORBIDDEN_WORDS = [
+
+        "selenium",
+        "webdriver",
+        "chromedriver",
+
+        "asyncpg",
+        "psycopg",
+
+        "database",
+        "db_manager",
+
+        "models",
+        "model",
+
+        "routers",
+        "router",
+
+        "repository",
+
+        "services",
+
+        "parser",
+        "parsers",
+
+        "basesettings",
+        "configdict"
+    ]
+
     @classmethod
     def validate(
         cls,
@@ -64,7 +93,7 @@ class ResponseValidator:
         paths = []
 
         requirements = ""
-        main_content = ""
+        all_content = ""
 
         for file in files:
 
@@ -93,15 +122,14 @@ class ResponseValidator:
                 path
             )
 
+            all_content += (
+                "\n" +
+                content.lower()
+            )
+
             if path == "requirements.txt":
 
                 requirements = (
-                    content.lower()
-                )
-
-            elif path == "app/main.py":
-
-                main_content = (
                     content.lower()
                 )
 
@@ -119,6 +147,15 @@ class ResponseValidator:
                 "Запрещена фиксированная версия aiogram"
             )
 
+        for word in cls.FORBIDDEN_WORDS:
+
+            if word in all_content:
+
+                return (
+                    False,
+                    f"Запрещено использовать: {word}"
+                )
+
         bad_patterns = [
 
             "await dp.start_polling(",
@@ -127,37 +164,13 @@ class ResponseValidator:
 
         for item in bad_patterns:
 
-            if item in main_content:
+            if item in all_content:
 
                 return (
                     False,
                     f"Неверный aiogram запуск: {item}"
                 )
-        forbidden_patterns = [
 
-            r"from\s+selenium",
-            r"import\s+selenium",
-
-            r"from\s+asyncpg",
-            r"import\s+asyncpg",
-
-            r"chromedriver",
-
-            r"class\s+.*BaseSettings",
-            r"Settings\("
-        ]
-
-        for pattern in forbidden_patterns:
-
-            if re.search(
-                    pattern,
-                    main_content,
-                    re.IGNORECASE
-            ):
-                return (
-                    False,
-                    f"Запрещено: {pattern}"
-                )
         return (
             True,
             ""
@@ -180,7 +193,7 @@ class ResponseValidator:
         )
 
         match = re.search(
-            r'({.*})',
+            r"({.*})",
             text,
             re.DOTALL
         )

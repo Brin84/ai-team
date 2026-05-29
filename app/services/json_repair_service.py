@@ -35,7 +35,7 @@ class JsonRepairService:
 
     @staticmethod
     def repair_json(
-        text: str
+            text: str
     ) -> str:
 
         if not text:
@@ -62,16 +62,32 @@ class JsonRepairService:
         )
 
         if (
-            start == -1
-            or
-            end == -1
+                start == -1
+                or
+                end == -1
         ):
             return ""
 
-        return text[
+        candidate = text[
             start:end + 1
         ]
 
+        try:
+
+            import json
+
+            data = json.loads(
+                candidate
+            )
+
+            return json.dumps(
+                data,
+                ensure_ascii=False
+            )
+
+        except Exception:
+
+            return candidate
     @staticmethod
     def is_empty_response(
         text: str

@@ -1,13 +1,13 @@
 from pathlib import Path
-import importlib.util
-import sys
-import os
+import re
 
 
 class ImportValidator:
 
-    @staticmethod
-    def validate():
+    @classmethod
+    def validate(
+        cls
+    ):
 
         errors = []
 
@@ -15,48 +15,78 @@ class ImportValidator:
             "generated_projects/project_1"
         )
 
-        old_path = os.getcwd()
-
-        os.chdir(
-            project_path
-        )
-
-        sys.path.insert(
-            0,
-            str(project_path)
-        )
-
-        try:
-
-            for file in project_path.rglob(
+        python_files = list(
+            project_path.rglob(
                 "*.py"
-            ):
+            )
+        )
 
-                try:
+        existing_modules = {
 
-                    spec = importlib.util.spec_from_file_location(
-                        file.stem,
-                        file
-                    )
+            file.stem
+            for file in python_files
 
-                    module = importlib.util.module_from_spec(
-                        spec
-                    )
+        }
 
-                    spec.loader.exec_module(
-                        module
-                    )
+        forbidden_local_modules = {
 
-                except Exception as e:
+            "database",
+            "models",
+            "routers",
+            "config",
+            "settings",
+            "services",
+            "repository",
+            "repositories",
+            "parser",
+            "parsers"
+        }
+
+        for file in python_files:
+
+            try:
+
+                content = file.read_text(
+                    encoding="utf-8"
+                )
+
+            except Exception as e:
+
+                errors.append(
+                    f"{file}: {e}"
+                )
+
+                continue
+
+            from_imports = re.findall(
+                r"from\s+([a-zA-Z0-9_.]+)\s+import",
+                content
+            )
+
+            normal_imports = re.findall(
+                r"^import\s+([a-zA-Z0-9_.]+)",
+                content,
+                re.MULTILINE
+            )
+
+            imports = (
+                from_imports +
+                normal_imports
+            )
+
+            for module in imports:
+
+                root = (
+                    module
+                    .split(".")[0]
+                    .strip()
+                    .lower()
+                )
+
+                if root in forbidden_local_modules:
 
                     errors.append(
-                        f"{file}: {e}"
+                        f"{file}: модуль '{root}' запрещён"
                     )
-
-        finally:
-
-            os.chdir(
-                old_path
-            )
 
         return errors

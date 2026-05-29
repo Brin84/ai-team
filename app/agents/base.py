@@ -26,7 +26,8 @@ class BaseAgent:
         self,
         task: str
     ) -> str:
-
+        print("\n=== TASK TO MODEL ===\n")
+        print(task[:3000])
         messages = [
 
             ChatCompletionSystemMessageParam(
@@ -55,12 +56,12 @@ class BaseAgent:
         response = self.client.chat.completions.create(
             model=settings.MODEL_NAME,
             messages=messages,
-            max_tokens=1600,
+            max_tokens=2500,
             temperature=0.05,
             extra_body={
                 "think": False,
                 "options": {
-                    "num_predict": 1600,
+                    "num_predict": 2500,
                     "temperature": 0.05
                 }
             }
@@ -79,7 +80,8 @@ class BaseAgent:
             or
             ""
         )
-
+        print("\n=== MODEL RESPONSE ===\n")
+        print(content[:5000])
 
         bad_prefixes = [
 

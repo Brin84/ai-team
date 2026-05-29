@@ -68,9 +68,7 @@ class AITeam:
             HistoryService.get_known_errors()
         )
 
-        success_patterns = (
-            HistoryService.get_success_patterns()
-        )
+        success_patterns = []
 
         knowledge = (
             KnowledgeService.get_rules()
@@ -113,19 +111,23 @@ class AITeam:
             "\n=== РАЗРАБОТЧИК ===\n"
         )
 
-        state["code"] = (
-            JsonRepairService.repair_json(
-                JsonRepairService.extract_content(
-                    self.developer.run(
-                        PromptBuilder.developer_prompt(
-                            task=task,
-                            architecture=state["architecture"],
-                            team_errors=team_errors,
-                            success_patterns=success_patterns,
-                            knowledge=knowledge
-                        )
+        raw_response = (
+            JsonRepairService.extract_content(
+                self.developer.run(
+                    PromptBuilder.developer_prompt(
+                        task=task,
+                        architecture=state["architecture"],
+                        team_errors=team_errors,
+                        success_patterns=success_patterns,
+                        knowledge=knowledge
                     )
                 )
+            )
+        )
+
+        state["code"] = (
+            JsonRepairService.repair_json(
+                raw_response
             )
         )
 
@@ -153,30 +155,50 @@ class AITeam:
 
                 if is_valid:
 
+                    state["runtime_errors"] = []
+
                     return state
 
             print(
                 f"\nОшибка ответа: {error}"
             )
 
-            state["code"] = (
-                JsonRepairService.repair_json(
-                    JsonRepairService.extract_content(
-                        self.developer.run(
-                            PromptBuilder.fix_prompt(
-                                error=error,
-                                previous_code=state["code"],
-                                knowledge=knowledge
-                            )
+            print(
+                "\n=== RAW RESPONSE ===\n"
+            )
+
+            print(
+                state["code"]
+            )
+
+            raw_response = (
+                JsonRepairService.extract_content(
+                    self.developer.run(
+                        PromptBuilder.fix_prompt(
+                            error=error,
+                            previous_code=state["code"],
+                            knowledge = knowledge[:2000]
                         )
                     )
                 )
             )
 
+            print(
+                "\n=== RAW MODEL RESPONSE ===\n"
+            )
+
+            print(
+                raw_response
+            )
+
+            state["code"] = (
+                JsonRepairService.repair_json(
+                    raw_response
+                )
+            )
+
         state["runtime_errors"] = [
-
             "Не удалось получить валидный JSON"
-
         ]
 
         state["code"] = ""

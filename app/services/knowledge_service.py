@@ -8,6 +8,8 @@ class KnowledgeService:
         "knowledge.json"
     )
 
+    MAX_RULES = 50
+
     @classmethod
     def get_rules(
         cls
@@ -19,11 +21,23 @@ class KnowledgeService:
 
         try:
 
-            return json.loads(
+            data = json.loads(
                 cls.FILE.read_text(
                     encoding="utf-8"
                 )
             )
+
+            if not isinstance(
+                data,
+                list
+            ):
+                return []
+
+            return [
+                str(item)
+                for item in data
+                if str(item).strip()
+            ]
 
         except Exception:
 
@@ -35,17 +49,34 @@ class KnowledgeService:
         rule: str
     ):
 
+        rule = str(
+            rule or ""
+        ).strip()
+
         if not rule:
             return
 
         rules = cls.get_rules()
 
-        if rule in rules:
-            return
+        rules = [
 
-        rules.append(
+            item
+
+            for item in rules
+
+            if item.lower()
+            !=
+            rule.lower()
+        ]
+
+        rules.insert(
+            0,
             rule
         )
+
+        rules = rules[
+            :cls.MAX_RULES
+        ]
 
         cls.FILE.write_text(
             json.dumps(
@@ -53,5 +84,15 @@ class KnowledgeService:
                 ensure_ascii=False,
                 indent=4
             ),
+            encoding="utf-8"
+        )
+
+    @classmethod
+    def clear(
+        cls
+    ):
+
+        cls.FILE.write_text(
+            "[]",
             encoding="utf-8"
         )

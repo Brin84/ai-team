@@ -10,13 +10,48 @@ class RuntimeAnalyzer:
         ).lower()
 
         if (
+            "selenium"
+            in error
+        ):
+
+            return (
+                "Запрещено использовать selenium"
+            )
+
+        if (
+            "chromedriver"
+            in error
+        ):
+
+            return (
+                "Запрещено использовать chromedriver"
+            )
+
+        if (
+            "asyncpg"
+            in error
+        ):
+
+            return (
+                "Запрещено использовать asyncpg"
+            )
+
+        if (
+            "psycopg-async"
+            in error
+        ):
+
+            return (
+                "Запрещено использовать несуществующий пакет psycopg-async"
+            )
+
+        if (
             "no matching distribution found"
             in error
         ):
 
             return (
-                "Используй только существующие пакеты "
-                "из PyPI"
+                "Используй только существующие пакеты из PyPI"
             )
 
         if (
@@ -25,8 +60,7 @@ class RuntimeAnalyzer:
         ):
 
             return (
-                "Проверяй существование пакета "
-                "перед добавлением в requirements.txt"
+                "Проверяй существование пакета перед добавлением в requirements.txt"
             )
 
         if (
@@ -35,8 +69,43 @@ class RuntimeAnalyzer:
         ):
 
             return (
-                "Не импортируй модули, "
-                "которые не созданы в проекте"
+                "Не импортируй модули которые не создаются в проекте"
+            )
+
+        if (
+            "database"
+            in error
+        ):
+
+            return (
+                "Не импортируй database если файл database.py не создаётся"
+            )
+
+        if (
+            "routers"
+            in error
+        ):
+
+            return (
+                "Не импортируй routers если файл routers.py не создаётся"
+            )
+
+        if (
+            "models"
+            in error
+        ):
+
+            return (
+                "Не импортируй models если файл models.py не создаётся"
+            )
+
+        if (
+            "config"
+            in error
+        ):
+
+            return (
+                "Не импортируй config если файл config.py не создаётся"
             )
 
         if (
@@ -45,8 +114,7 @@ class RuntimeAnalyzer:
         ):
 
             return (
-                "Проверяй синтаксис Python "
-                "перед завершением генерации"
+                "Проверяй синтаксис Python перед завершением генерации"
             )
 
         if (
@@ -64,8 +132,7 @@ class RuntimeAnalyzer:
         ):
 
             return (
-                "Используй os.getenv() "
-                "для токенов"
+                "Используй os.getenv() для токенов"
             )
 
         if (
@@ -74,8 +141,7 @@ class RuntimeAnalyzer:
         ):
 
             return (
-                "Не создавай обязательные настройки "
-                "без значений по умолчанию"
+                "Не создавай обязательные настройки без значений по умолчанию"
             )
 
         if (
@@ -84,8 +150,7 @@ class RuntimeAnalyzer:
         ):
 
             return (
-                "Проверяй существование методов "
-                "и атрибутов"
+                "Проверяй существование методов и атрибутов"
             )
 
         if (
@@ -94,8 +159,7 @@ class RuntimeAnalyzer:
         ):
 
             return (
-                "Проверяй сигнатуры функций "
-                "и типы аргументов"
+                "Проверяй сигнатуры функций и типы аргументов"
             )
 
         return (

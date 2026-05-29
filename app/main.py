@@ -36,6 +36,10 @@ from app.services.knowledge_service import (
     KnowledgeService
 )
 
+from app.services.pattern_service import (
+    PatternService
+)
+
 
 def load_task() -> str:
 
@@ -66,6 +70,43 @@ def save_history_safe(
 
     except Exception:
         pass
+
+
+def save_pattern_safe(
+    result
+):
+
+    try:
+
+        project_dir = Path(
+            "generated_projects/project_1"
+        )
+
+        files_count = len(
+            [
+                file
+                for file in project_dir.rglob("*")
+                if file.is_file()
+            ]
+        )
+
+        PatternService.save_pattern(
+            task=result.get(
+                "task",
+                ""
+            ),
+            architecture=result.get(
+                "architecture",
+                ""
+            ),
+            files_count=files_count
+        )
+
+    except Exception as e:
+
+        print(
+            f"\nОшибка сохранения шаблона: {e}"
+        )
 
 
 def main():
@@ -246,6 +287,10 @@ def main():
         try:
 
             HistoryService.save_success_pattern(
+                result
+            )
+
+            save_pattern_safe(
                 result
             )
 

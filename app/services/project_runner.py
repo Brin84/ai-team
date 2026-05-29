@@ -148,16 +148,44 @@ class ProjectRunner:
                 timeout=15
             )
 
+            stdout = (
+                result.stdout or ""
+            )
+
+            stderr = (
+                result.stderr or ""
+            )
+
+            combined = (
+                stdout + stderr
+            ).lower()
+
+            runtime_errors = [
+
+                "traceback",
+                "syntaxerror",
+                "modulenotfounderror",
+                "importerror",
+                "attributeerror",
+                "typeerror",
+                "nameerror"
+            ]
+
+            has_runtime_error = any(
+                item in combined
+                for item in runtime_errors
+            )
+
             return {
 
                 "success":
-                    result.returncode == 0,
+                    not has_runtime_error,
 
                 "stdout":
-                    result.stdout,
+                    stdout,
 
                 "stderr":
-                    result.stderr
+                    stderr
             }
 
         except subprocess.TimeoutExpired:
