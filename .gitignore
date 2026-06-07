@@ -5,3 +5,4 @@ __pycache__/
 generated_projects/
 .idea/
 .vscode/
+.junie/

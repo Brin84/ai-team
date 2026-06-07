@@ -4,37 +4,68 @@ import ast
 
 class CodeValidator:
 
-    @staticmethod
-    def validate():
+    PROJECT_PATH = Path(
+        "generated_projects/project_1"
+    )
+
+    @classmethod
+    def validate(
+            cls
+    ) -> list[dict]:
 
         errors = []
 
-        files = Path(
-            "app"
-        ).rglob(
+        files = cls.PROJECT_PATH.rglob(
             "*.py"
         )
 
         for file in files:
-
+            code = ""
             try:
 
-                with open(
-                    file,
-                    "r",
+                code = file.read_text(
                     encoding="utf-8"
-                ) as f:
-
-                    code = f.read()
+                )
 
                 ast.parse(
                     code
                 )
 
+            except SyntaxError as e:
+
+                errors.append(
+                    {
+                        "type": "syntax_error",
+                        "file": str(
+                            file.relative_to(
+                                cls.PROJECT_PATH
+                            )
+                        ).replace(
+                            "\\",
+                            "/"
+                        ),
+                        "line": e.lineno,
+                        "message": str(e),
+                        "code": code
+                    }
+                )
+
             except Exception as e:
 
                 errors.append(
-                    f"{file}: {e}"
+                    {
+                        "type": "validation_error",
+                        "file": str(
+                            file.relative_to(
+                                cls.PROJECT_PATH
+                            )
+                        ).replace(
+                            "\\",
+                            "/"
+                        ),
+                        "message": str(e),
+                        "code": code
+                    }
                 )
 
         return errors

@@ -22,8 +22,8 @@ class ProjectRunner:
 
     @classmethod
     def fix_requirements(
-        cls,
-        project: Path
+            cls,
+            project: Path
     ):
 
         requirements = (
@@ -36,9 +36,9 @@ class ProjectRunner:
         if requirements.exists():
 
             with open(
-                requirements,
-                "r",
-                encoding="utf-8"
+                    requirements,
+                    "r",
+                    encoding="utf-8"
             ) as f:
 
                 for line in f:
@@ -66,9 +66,9 @@ class ProjectRunner:
         )
 
         with open(
-            requirements,
-            "w",
-            encoding="utf-8"
+                requirements,
+                "w",
+                encoding="utf-8"
         ) as f:
 
             f.write(
@@ -81,23 +81,45 @@ class ProjectRunner:
 
     @classmethod
     def run(
-        cls
+            cls
     ):
 
         project = Path(
             "generated_projects/project_1"
         )
 
+        if not project.exists():
+
+            return {
+
+                "success": False,
+
+                "stdout": "",
+
+                "stderr":
+                    "Проект не найден"
+            }
+
         requirements = (
             project /
             "requirements.txt"
         )
 
-        if requirements.exists():
+        if not requirements.exists():
 
-            cls.fix_requirements(
-                project
-            )
+            return {
+
+                "success": False,
+
+                "stdout": "",
+
+                "stderr":
+                    "requirements.txt не найден"
+            }
+
+        cls.fix_requirements(
+            project
+        )
 
         print(
             "\nУстановка зависимостей...\n"
@@ -110,9 +132,9 @@ class ProjectRunner:
                 "pip",
                 "install",
                 "-r",
-                "requirements.txt"
+                str(requirements.name)
             ],
-            cwd=project,
+            cwd=str(project),
             capture_output=True,
             text=True
         )
@@ -142,22 +164,23 @@ class ProjectRunner:
                     "-m",
                     "app.main"
                 ],
-                cwd=project,
+                cwd=str(project),
                 capture_output=True,
                 text=True,
                 timeout=15
             )
 
             stdout = (
-                result.stdout or ""
+                    result.stdout or ""
             )
 
             stderr = (
-                result.stderr or ""
+                    result.stderr or ""
             )
 
             combined = (
-                stdout + stderr
+                    stdout +
+                    stderr
             ).lower()
 
             runtime_errors = [
@@ -197,6 +220,5 @@ class ProjectRunner:
                 "stdout":
                     "Проект успешно запущен",
 
-                "stderr":
-                    ""
+                "stderr": ""
             }

@@ -7,11 +7,11 @@ class FileWriter:
 
     BASE_DIR = Path(
         "generated_projects/project_1"
-    )
+    ).resolve()
 
     @classmethod
     def clear_project(
-        cls
+            cls
     ):
 
         if cls.BASE_DIR.exists():
@@ -27,13 +27,23 @@ class FileWriter:
 
     @classmethod
     def save(
-        cls,
-        response: str
+            cls,
+            response: str,
+            clear_project: bool = False
     ):
 
         try:
 
-            cls.clear_project()
+            if clear_project:
+
+                cls.clear_project()
+
+            else:
+
+                cls.BASE_DIR.mkdir(
+                    parents=True,
+                    exist_ok=True
+                )
 
             response = (
                 response
@@ -67,19 +77,43 @@ class FileWriter:
 
             for file_data in files:
 
-                path = file_data.get(
-                    "path"
+                if not isinstance(
+                        file_data,
+                        dict
+                ):
+                    continue
+
+                path = str(
+                    file_data.get(
+                        "path",
+                        ""
+                    )
+                ).strip()
+
+                content = str(
+                    file_data.get(
+                        "content",
+                        ""
+                    )
                 )
 
-                content = file_data.get(
-                    "content",
-                    ""
-                )
+                if not path:
+                    continue
 
                 full_path = (
-                    cls.BASE_DIR /
-                    Path(path)
-                )
+                        cls.BASE_DIR
+                        / Path(path)
+                ).resolve()
+
+                if not str(
+                        full_path
+                ).startswith(
+                    str(cls.BASE_DIR)
+                ):
+
+                    raise Exception(
+                        f"Недопустимый путь: {path}"
+                    )
 
                 full_path.parent.mkdir(
                     parents=True,
@@ -87,9 +121,9 @@ class FileWriter:
                 )
 
                 with open(
-                    full_path,
-                    "w",
-                    encoding="utf-8"
+                        full_path,
+                        "w",
+                        encoding="utf-8"
                 ) as f:
 
                     f.write(
@@ -123,7 +157,7 @@ class FileWriter:
             )
 
             print(
-                response[:1500]
+                response[:3000]
             )
 
             return False
